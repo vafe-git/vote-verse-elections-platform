@@ -5,14 +5,40 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useVoting } from '@/contexts/VotingContext';
-import { Vote, Users, UserCheck, Shield } from 'lucide-react';
+import { Vote, Users, UserCheck, Shield, LogOut } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
 
 const Index = () => {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, logout } = useAuth();
   const { isVotingOpen, votes, candidates } = useVoting();
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
   const totalVotes = votes.length;
   const approvedCandidates = candidates.filter(c => c.approved).length;
+
+  const handleLogout = () => {
+    logout();
+    toast({
+      title: "Logged Out",
+      description: "You have been successfully logged out.",
+    });
+    navigate('/');
+  };
+
+  const getDashboardLink = () => {
+    switch (user?.role) {
+      case 'admin':
+        return '/admin';
+      case 'lecturer':
+        return '/lecturer';
+      case 'candidate':
+        return '/register-candidate';
+      default:
+        return '/vote';
+    }
+  };
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
@@ -32,6 +58,9 @@ const Index = () => {
                     {isVotingOpen ? "Voting Open" : "Voting Closed"}
                   </Badge>
                   <span className="text-sm text-gray-600">Welcome, {user?.name}</span>
+                  {user?.role === 'voter' && user?.hasVoted && (
+                    <Badge className="bg-green-100 text-green-800">Already Voted</Badge>
+                  )}
                   {user?.role === 'voter' && !user?.hasVoted && isVotingOpen && (
                     <Button asChild className="vote-button-primary">
                       <Link to="/vote">Cast Your Vote</Link>
@@ -42,6 +71,20 @@ const Index = () => {
                       <Link to="/admin">Admin Dashboard</Link>
                     </Button>
                   )}
+                  {user?.role === 'lecturer' && (
+                    <Button asChild variant="outline">
+                      <Link to="/lecturer">Lecturer Dashboard</Link>
+                    </Button>
+                  )}
+                  {user?.role === 'candidate' && (
+                    <Button asChild variant="outline">
+                      <Link to="/register-candidate">Candidate Portal</Link>
+                    </Button>
+                  )}
+                  <Button variant="outline" onClick={handleLogout} className="flex items-center space-x-2">
+                    <LogOut className="h-4 w-4" />
+                    <span>Logout</span>
+                  </Button>
                 </>
               ) : (
                 <Button asChild className="vote-button-primary">
@@ -77,15 +120,20 @@ const Index = () => {
             <div className="flex flex-col items-center space-y-4">
               <div className="flex items-center space-x-2 text-green-600">
                 <UserCheck className="h-6 w-6" />
-                <span className="text-lg font-medium">You have successfully voted!</span>
+                <span className="text-lg font-medium">You have already voted!</span>
               </div>
+              <p className="text-gray-600 mb-4">Thank you for participating in the election.</p>
               <Button asChild variant="outline" size="lg">
                 <Link to="/results">View Results</Link>
               </Button>
             </div>
           ) : isVotingOpen ? (
             <Button asChild size="lg" className="text-lg px-8 py-3 vote-button-primary">
-              <Link to="/vote">Cast Your Vote Now</Link>
+              <Link to={getDashboardLink()}>
+                {user?.role === 'admin' ? 'Admin Dashboard' : 
+                 user?.role === 'lecturer' ? 'Lecturer Dashboard' :
+                 user?.role === 'candidate' ? 'Candidate Portal' : 'Cast Your Vote Now'}
+              </Link>
             </Button>
           ) : (
             <div className="text-center">

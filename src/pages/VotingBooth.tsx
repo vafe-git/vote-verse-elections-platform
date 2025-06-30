@@ -4,11 +4,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useVoting } from '@/contexts/VotingContext';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Vote, ArrowLeft, CheckCircle, User, FileText } from 'lucide-react';
+import { Vote, ArrowLeft, CheckCircle, User, FileText, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const VotingBooth = () => {
@@ -26,6 +26,7 @@ const VotingBooth = () => {
       return;
     }
 
+    // Check if user has already voted
     if (user?.hasVoted) {
       toast({
         title: "Already Voted",
@@ -51,6 +52,27 @@ const VotingBooth = () => {
     return null;
   }
 
+  // Double-check voting eligibility
+  const votingRecords = JSON.parse(localStorage.getItem('voteverse_voting_records') || '[]');
+  const hasAlreadyVoted = votingRecords.some((record: any) => record.voterEmail === user?.email);
+
+  if (hasAlreadyVoted) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
+        <Card className="max-w-md w-full vote-card">
+          <CardContent className="p-8 text-center">
+            <AlertTriangle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Already Voted</h2>
+            <p className="text-gray-600 mb-6">You have already voted in this election. Each voter can only vote once.</p>
+            <Button asChild className="vote-button-primary">
+              <Link to="/">Return to Home</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   const approvedCandidates = candidates.filter(c => c.approved);
   const positions = [...new Set(approvedCandidates.map(c => c.position))];
 
@@ -73,16 +95,28 @@ const VotingBooth = () => {
       const results = await Promise.all(votePromises);
       
       if (results.every(result => result)) {
-        toast({
-          title: "Vote Submitted Successfully!",
-          description: "Your vote has been recorded securely and anonymously.",
-        });
+        // Record that this user has voted
+        const votingRecord = {
+          voterEmail: user?.email,
+          voterId: user?.id,
+          timestamp: new Date().toISOString(),
+          votes: selectedCandidates
+        };
+        
+        const existingRecords = JSON.parse(localStorage.getItem('voteverse_voting_records') || '[]');
+        existingRecords.push(votingRecord);
+        localStorage.setItem('voteverse_voting_records', JSON.stringify(existingRecords));
         
         // Update user's voting status
         if (user) {
           const updatedUser = { ...user, hasVoted: true };
           localStorage.setItem('voteverse_user', JSON.stringify(updatedUser));
         }
+        
+        toast({
+          title: "Vote Submitted Successfully!",
+          description: "Your vote has been recorded securely and anonymously.",
+        });
         
         navigate('/');
       } else {

@@ -6,7 +6,7 @@ interface User {
   email: string;
   name: string;
   studentId: string;
-  role: 'voter' | 'candidate' | 'admin';
+  role: 'voter' | 'candidate' | 'admin' | 'lecturer';
   hasVoted?: boolean;
 }
 
@@ -37,7 +37,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const storedUser = localStorage.getItem('voteverse_user');
     if (storedUser) {
       try {
-        setUser(JSON.parse(storedUser));
+        const parsedUser = JSON.parse(storedUser);
+        // Check if user has already voted by looking at voting records
+        const votingRecords = JSON.parse(localStorage.getItem('voteverse_voting_records') || '[]');
+        const hasVoted = votingRecords.some((record: any) => record.voterId === parsedUser.id);
+        setUser({ ...parsedUser, hasVoted });
       } catch (error) {
         console.error('Error parsing stored user data:', error);
         localStorage.removeItem('voteverse_user');
@@ -64,6 +68,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           studentId: 'ADMIN001',
           role: 'admin'
         };
+      } else if (email.includes('lecturer')) {
+        userData = {
+          id: `lecturer-${Date.now()}`,
+          email,
+          name: email.split('@')[0].replace('lecturer', 'Dr. '),
+          studentId: `LEC${Math.floor(Math.random() * 1000)}`,
+          role: 'lecturer'
+        };
       } else if (email.includes('candidate')) {
         userData = {
           id: `candidate-${Date.now()}`,
@@ -78,10 +90,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           email,
           name: email.split('@')[0],
           studentId: `STU${Math.floor(Math.random() * 10000)}`,
-          role: 'voter',
-          hasVoted: Math.random() > 0.7 // 30% chance they've already voted
+          role: 'voter'
         };
       }
+      
+      // Check if user has already voted
+      const votingRecords = JSON.parse(localStorage.getItem('voteverse_voting_records') || '[]');
+      const hasVoted = votingRecords.some((record: any) => record.voterEmail === email);
+      userData.hasVoted = hasVoted;
       
       setUser(userData);
       localStorage.setItem('voteverse_user', JSON.stringify(userData));
@@ -97,6 +113,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     setUser(null);
     localStorage.removeItem('voteverse_user');
+    // Clear any session data
+    console.log('User logged out successfully');
   };
 
   const value = {

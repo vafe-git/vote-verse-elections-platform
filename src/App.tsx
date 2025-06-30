@@ -9,6 +9,7 @@ import Login from "./pages/Login";
 import VotingBooth from "./pages/VotingBooth";
 import Results from "./pages/Results";
 import AdminDashboard from "./pages/AdminDashboard";
+import LecturerDashboard from "./pages/LecturerDashboard";
 import CandidateRegistration from "./pages/CandidateRegistration";
 import NotFound from "./pages/NotFound";
 import { AuthProvider } from "./contexts/AuthContext";
@@ -30,6 +31,7 @@ const App = () => (
               <Route path="/vote" element={<VotingBooth />} />
               <Route path="/results" element={<Results />} />
               <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/lecturer" element={<LecturerDashboard />} />
               <Route path="/register-candidate" element={<CandidateRegistration />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
